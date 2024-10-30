@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人通讯录</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2 {
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        .update-form {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>个人通讯录</h1>
+
+    <h2>联系人列表</h2>
+    <table id="contact-table">
+        <thead>
+        <tr>
+            <th>姓名</th>
+            <th>地址</th>
+            <th>电话</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody id="contact-list"></tbody>
+    </table>
+
+    <h2>添加新联系人</h2>
+    <form id="contact-form">
+        <input type="text" id="name" placeholder="姓名" required>
+        <input type="text" id="address" placeholder="地址" required>
+        <input type="text" id="phone" placeholder="电话" required>
+        <button type="submit">添加</button>
+    </form>
+
+    <div class="update-form" id="update-form">
+        <h2>更新联系人</h2>
+        <input type="hidden" id="update-id">
+        <input type="text" id="update-name" placeholder="姓名" required>
+        <input type="text" id="update-address" placeholder="地址" required>
+        <input type="text" id="update-phone" placeholder="电话" required>
+        <button onclick="updateContact()">更新</button>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadContacts();
+
+        const contactForm = document.getElementById('contact-form');
+        contactForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            addContact();
+        });
+    });
+
+    function loadContacts() {
+        fetch('http://127.0.0.1:8080/api/contacts')
+            .then(response => response.json())
+            .then(data => {
+                const contactList = document.getElementById('contact-list');
+                contactList.innerHTML = '';
+
+                data.forEach(contact => {
+                    const contactRow = document.createElement('tr');
+                    contactRow.innerHTML = `
+                            <td>${contact.name}</td>
+                            <td>${contact.address}</td>
+                            <td>${contact.phone}</td>
+                            <td>
+                                <button onclick="showUpdateForm(${contact.id}, '${contact.name}', '${contact.address}', '${contact.phone}')">更新</button>
+                                <button onclick="deleteContact(${contact.id})">删除</button>
+                            </td>
+                        `;
+                    contactList.appendChild(contactRow);
+                });
+            })
+            .catch(error => console.error('Error loading contacts:', error));
+    }
+
+    function addContact() {
+        const name = document.getElementById('name').value;
+        const address = document.getElementById('address').value;
+        const phone = document.getElementById('phone').value;
+
+        const newContact = { name, address, phone };
+
+        fetch('http://127.0.0.1:8080/api/contacts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(newContact)
+        })
+            .then(response => {
+                if (response.ok) {
+                    loadContacts();
+                    document.getElementById('contact-form').reset();
+                } else {
+                    console.error('Error adding contact:', response.statusText);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function showUpdateForm(id, name, address, phone) {
+        document.getElementById('update-id').value = id;
+        document.getElementById('update-name').value = name;
+        document.getElementById('update-address').value = address;
+        document.getElementById('update-phone').value = phone;
+        document.getElementById('update-form').style.display = 'block';
+    }
+
+    function updateContact() {
+        const id = document.getElementById('update-id').value;
+        const name = document.getElementById('update-name').value;
+        const address = document.getElementById('update-address').value;
+        const phone = document.getElementById('update-phone').value;
+
+        const updatedContact = { name, address, phone };
+
+        fetch(`http://127.0.0.1:8080/api/contacts/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatedContact)
+        })
+            .then(response => {
+                if (response.ok) {
+                    loadContacts();
+                    document.getElementById('update-form').style.display = 'none';
+                } else {
+                    console.error('Error updating contact:', response.statusText);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function deleteContact(id) {
+        fetch(`http://127.0.0.1:8080/api/contacts/${id}`, {
+            method: 'DELETE'
+        })
+            .then(response => {
+                if (response.ok) {
+                    loadContacts();
+                } else {
+                    console.error('Error deleting contact:', response.statusText);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+</script>
+</body>
+</html>
